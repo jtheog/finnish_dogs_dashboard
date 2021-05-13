@@ -1,0 +1,282 @@
+# 00_dogs_data_cleaning
+
+# load libraries ----
+library(tidyverse)
+library(readxl)
+library(janitor)
+library(tidymodels)
+library(reshape2)
+
+# 00_import raw data ----
+dogs_00 <- read_excel("Data/raw/finnish_dogs.xlsx", sheet = 2)
+
+
+
+# 01_clean column names ----
+dogs_01 <-
+  dogs_00 %>% 
+  clean_names()
+  
+
+# 02_select the variables of interest ----
+dogs_02 <- 
+  dogs_01
+  # %>% 
+  # select(id, breed, body_size, age, sex, sterilisation, weaningtime, socialization_score,
+  #        family, dogs, experience, daily_exercise, activities_training, alone, 
+  #        urban_environment_score, fear, aggression, noise_sensitivity, fear_of_surfaces_and_heights,
+  #        separation_related_behaviour, inattention_group, hyperactivity_impulsivity_group, 
+  #        compulsive_behaviour)
+
+         
+dogs_03 <-
+  dogs_02 %>% 
+        # numbers as characters to categorical characters
+        # background
+  mutate(age = ifelse(age < 2, "< 2yrs",
+                      ifelse(between(age, 2, 4), "2-4yrs",
+                             ifelse(between(age, 4.01, 6), "4-6yrs",
+                                    ifelse(between(age, 6.01, 8), "6-8yrs",
+                                           ifelse(between(age, 8.01, 10), "8-10yrs",
+                                                  ifelse(age > 10, ">10yrs", NA)))))),
+         sex = ifelse(sex == 1, "male",
+                      ifelse(sex == 2, "female", NA)),
+         #sex = as_factor(sex),
+         sterilisation = ifelse(sterilisation == 1, "neutered",
+                                ifelse(sterilisation == 0, "intact", NA))
+         )
+         
+dogs_04 <-
+  dogs_03 %>% 
+         # numbers as characters to categorical characters
+         # environment
+  mutate(weaningtime = ifelse(weaningtime == 1, "<7wks",
+                              ifelse(weaningtime == 2, "7wks",
+                                     ifelse(weaningtime == 3, "8wks",
+                                            ifelse(weaningtime == 4, ">8wks", NA)))),
+         #weaningtime = as_factor(weaningtime),
+         socialization_score = ifelse(between(socialization_score, 1, 5), "1-5",
+                                      ifelse(between(socialization_score, 6, 10), "6-10",
+                                             ifelse(between(socialization_score, 11, 15), "11-15",
+                                                    ifelse(between(socialization_score, 16, 20), "16-20",
+                                                           ifelse(between(socialization_score, 21, 25), "21-25",
+                                                                  ifelse(between(socialization_score, 26, 30), "26-30",
+                                                                         ifelse(between(socialization_score, 31, 35), "31-35", NA))))))),
+         #socialization_score = as_factor(socialization_score),
+         family = ifelse(family == 1, "single_no_child",
+                         ifelse(family == 2, "couple_no_child",
+                                ifelse(family == 3, "one_child",
+                                       ifelse(family == 4, "two_child",
+                                              ifelse(family == 5, ">two_child", NA))))),
+         dogs = ifelse(dogs == 1, "no_other_dogs",
+                       ifelse(dogs == 2, "other_dogs", NA)),
+         experience = ifelse(experience == 1, "first_dog",
+                             ifelse(experience == 2, "not_first_dog", NA)),
+         daily_exercise = ifelse(daily_exercise == 1, "<60min",
+                                 ifelse(daily_exercise == 2, "60-120mins",
+                                        ifelse(daily_exercise == 3, "120-180mins",
+                                               ifelse(daily_exercise == 4, ">180mins", NA)))),
+         activities_training = ifelse(activities_training == 0, "none_seldom",
+                                      ifelse(activities_training == 1, "sometimes",
+                                             ifelse(activities_training == 2, "at_least_weekly", NA))),
+         alone = ifelse(alone == 0, "<3hrs",
+                         ifelse(alone == 1, "3-6hrs",
+                                ifelse(alone == 2, "6-8hrs",
+                                       ifelse(alone == 3, ">8hrs", NA))))
+         )
+         
+         
+                
+dogs_05 <-
+  dogs_04 %>%
+  # "NA" to NA (could use naniar::replace_with_NA here instead) 
+  mutate(body_size = ifelse(body_size == "NA", NA, body_size),
+         family = ifelse(family == "NA", NA, family),
+         dogs = ifelse(dogs == "NA", NA, dogs),
+         experience = ifelse(experience == "NA", NA, experience),
+         daily_exercise = ifelse(daily_exercise == "NA", NA, daily_exercise),
+         activities_training = ifelse(activities_training == "NA", NA, activities_training),
+         alone = ifelse(alone == "NA", NA, alone),
+         urban_environment_score = ifelse(urban_environment_score == "NA", NA, urban_environment_score),
+         fear = ifelse(fear == "NA", NA, fear),
+         aggression = ifelse(aggression == "NA", NA, aggression),
+         noise_sensitivity = ifelse(noise_sensitivity == "NA", NA, noise_sensitivity),
+         inattention_group = ifelse(inattention_group == "NA", NA, inattention_group),
+         hyperactivity_impulsivity_group = ifelse(hyperactivity_impulsivity_group == "NA", NA, hyperactivity_impulsivity_group),
+         compulsive_behaviour = ifelse(compulsive_behaviour == "NA", NA, compulsive_behaviour),
+         # "unc" to NA
+         fear_of_strangers = ifelse(fear_of_strangers == "unc", NA, fear_of_strangers),
+         fear_of_dogs = ifelse(fear_of_dogs == "unc", NA, fear_of_dogs),
+         fear_of_situations = ifelse(fear_of_situations == "unc", NA, fear_of_situations),
+         fear = ifelse(fear == "unc", NA, fear),
+         aggression_toward_strangers = ifelse(aggression_toward_strangers == "unc", NA, aggression_toward_strangers),
+         aggression_toward_owner = ifelse(aggression_toward_owner == "unc", NA, aggression_toward_owner),
+         aggression = ifelse(aggression == "unc", NA, aggression),
+         fear_of_thunder = ifelse(fear_of_thunder == "unc", NA, fear_of_thunder),
+         fear_of_fireworks = ifelse(fear_of_fireworks == "unc", NA, fear_of_fireworks),
+         fear_of_gunshot = ifelse(fear_of_gunshot == "unc", NA, fear_of_gunshot),
+         noise_sensitivity = ifelse(noise_sensitivity == "unc", NA, noise_sensitivity),
+         separation_related_behaviour = ifelse(separation_related_behaviour == "unc", NA, separation_related_behaviour),
+         fear_of_surfaces_and_heights = ifelse(fear_of_surfaces_and_heights == "unc", NA, fear_of_surfaces_and_heights),
+         destroy_urinate_alone = ifelse(destroy_urinate_alone == "unc", NA, destroy_urinate_alone),
+         vocalize_salivate_pant_alone = ifelse(vocalize_salivate_pant_alone == "unc", NA, vocalize_salivate_pant_alone),
+         inattention_group = ifelse(inattention_group == "unc", NA, inattention_group),
+         hyperactivity_impulsivity_group = ifelse(hyperactivity_impulsivity_group == "unc", NA, hyperactivity_impulsivity_group),
+         tail_chasing = ifelse(tail_chasing == "unc", NA, tail_chasing),
+         fly_snapping = ifelse(fly_snapping == "unc", NA, fly_snapping),
+         surface_licking = ifelse(surface_licking == "unc", NA, surface_licking),
+         pacing = ifelse(pacing == "unc", NA, pacing),
+         staring = ifelse(staring == "unc", NA, staring),
+         excessive_drinking = ifelse(excessive_drinking == "unc", NA, excessive_drinking),
+         self_biting = ifelse(self_biting == "unc", NA, self_biting),
+         compulsive_behaviour = ifelse(compulsive_behaviour == "unc", NA, compulsive_behaviour)
+         )
+         # 
+         
+
+
+# how to handle the different types of NAs
+# CHARACTER VARIABLES
+# 1. breed, none missing
+# 2. body_size, 528 missing, modal replacement or consider removing the entire variable
+# 3. sex, 2 missing, remove cases with NA
+# 4. sterilization, 157 missing, probably okay to remove missing
+# 5. weaningtime, 1903 missing, probably should assign median or mode
+# 6. family, 13 missing, proabably okay to remove missing
+# 7. dogs, 13 missing, probably okay to remove missing
+# 8. experience, 13 missing, probably okay to remove missing
+# 9. daily_exercise, 159 missing, probably okay to remove
+# 10. activities_training, 1150 missing, consider median or modal replacement
+# 11. fear, 157 missing, probably okay to remove
+# 12. aggression, 323 missing, consider replacing
+# 13. noise_sensitivity, 3342 missing, may be too many to delete just the missings
+# 14. fear_of_surfaces_and_heights, 2486 missing, too many to delete just the missings
+# 15. separation_related_behaviour, 4924 missing, too many to just delete the missingness
+# 16. inattention_group, 863 missing, too many to delete
+# 17. hyperactivity_impulsivity_group, 863 missing, too many to delete
+# 18. compulsive_behaviour, 356 missing, too many to delete... but maybe okay?
+# NUMERIC VARIABLES
+# 1. id
+# 2. age
+# 3. socialization_score, 1148 missing, too many to just delete
+# 4. alone, 16 missing, probably okay to delete
+# 5. urban_environment_score, 4180 missing, too many to delete, consider removing variable
+
+
+# collapse aggression into a binary ----
+# low gets recoded to "no aggression" 
+# med and high recoded to "aggression
+dogs_06 <-
+  dogs_05 %>% 
+  mutate(aggression = ifelse(aggression == "low", "no_aggression",
+                             ifelse(aggression == "moderate", "aggression",
+                                    ifelse(aggression == "high", "aggression", NA))))
+
+
+# collapse fear into a binary ----
+dogs_07 <- 
+  dogs_06 %>% 
+  mutate(fear = ifelse(fear == "low", "no_fear",
+                       ifelse(fear == "moderate", "fear",
+                              ifelse(fear == "high", "fear", NA))))
+
+# collapse inattention group
+dogs_08 <-
+  dogs_07 %>% 
+  mutate(inattention_group = ifelse(inattention_group == "low", "attentive",
+                                    ifelse(inattention_group == "moderate", "inattentive",
+                                           ifelse(inattention_group == "high", "inattentive", NA))))
+
+# collapse hyperactivity group
+dogs_09 <-
+  dogs_08 %>% 
+  mutate(hyperactivity_impulsivity_group = ifelse(hyperactivity_impulsivity_group == "low", "not_hyperactive",
+                                                  ifelse(hyperactivity_impulsivity_group == "moderate", "hyperactive",
+                                                         ifelse(hyperactivity_impulsivity_group == "high", "hyperactive", NA))))
+
+# collapse compusilve group
+dogs_10 <-
+  dogs_09 %>% 
+  mutate(compulsive_behaviour = ifelse(compulsive_behaviour == "low", "not_compulsive",
+                                       ifelse(compulsive_behaviour == "moderate", "compulsive",
+                                              ifelse(compulsive_behaviour == "high", "compulsive", NA))))
+
+# noise sensitivity
+dogs_11 <-
+  dogs_10 %>% 
+  mutate(noise_sensitivity = ifelse(noise_sensitivity == "low", "not_noise_sensitive",
+                                    ifelse(noise_sensitivity == "moderate", "noise_sensitive",
+                                           ifelse(noise_sensitivity == "high", "noise_sensitive", NA))))
+
+# mutate variables to their rightful classes
+dogs_12 <-
+dogs_11 %>% 
+  mutate(urban_environment_score = as.numeric(urban_environment_score)) %>% 
+  mutate_if(is.character, as.factor)
+
+
+
+# how many rows have NAs ----
+# nrow(dogs_08[is.na(dogs_08$aggression) | is.na(dogs_08$noise_sensitivity),])
+# only 85 cases have NAs for BOTH aggression  and noise_sensitivity
+# 3,581 cases  have NAs  for either aggression or noise_sensitivity
+
+
+
+
+# manually impute some NAs for noise_sensitivity ----
+dogs_13 <-
+dogs_12 %>% 
+  mutate(noise_sensitivity = ifelse(fear_of_thunder == "low" & fear_of_fireworks == "low" & is.na(fear_of_gunshot), "not_noise_sensitive", noise_sensitivity)) %>% 
+  mutate_if(is.character, as.factor)
+
+
+dogs_14 <- 
+  dogs_13 %>% 
+  mutate(noise_sensitivity = ifelse(noise_sensitivity == 1, "noise_sensitive",
+                                    ifelse(noise_sensitivity == 2, "not_noise_sensitive",
+                                           ifelse(noise_sensitivity == "not_noise_sensitive", "not_noise_sensitive", NA)))) %>% 
+  mutate_if(is.character, as.factor)
+
+#   |fear_of_thunder |fear_of_fireworks |fear_of_gunshot |noise_sensitivity |    n|
+#   |:---------------|:-----------------|:---------------|:-----------------|----:|
+#   |low             |low               |NA              |NA                | 2165| 
+# impute noise_sensitivity as not_noise_sensitive
+# ifelse(fear_of_thunder == low & fear_of_fireworks == low & is.na(fear_of_gunshot), )
+#   |low             |NA                |NA              |NA                |  304| 
+#   |NA              |NA                |NA              |NA                |  262| these can prob be removed
+#   |low             |NA                |low             |NA                |  239|
+#   |NA              |low               |NA              |NA                |  192|
+#   |NA              |low               |low             |NA                |  108|
+#   |NA              |NA                |low             |NA                |   73|
+
+
+# remove fear_of_gunshot, destroy_urinate_alone, vocalize_salivate_pant_alone, separation_related_behaviour
+dogs_15 <-
+  dogs_14 %>% 
+  select(!fear_of_gunshot)
+
+# dogs_16 <-
+#   dogs_15 %>% 
+#   count(breed, sort = TRUE)
+# 
+# write_csv(dogs_16, "Data/clean/breeds.csv")
+
+
+# visualizations of clean data ----
+# 1. urban_environment_score
+dogs_15 %>%
+  select(urban_environment_score) %>% 
+  na.omit() %>% 
+  ggplot(aes(urban_environment_score)) +
+  geom_density()
+
+  
+
+# export clean data ----
+# note: you will have to clean the data some more: 
+#    change factors with values 1, 2, 3 to something more meaningful (i.e. family, dogs, 
+#        experience, daily_exercise, activities_training)
+#    remove missingness where applicable
+# but for now, you're just going to export the data because you need to build a model
+dogs <- write_csv(dogs_15, "Data/clean/dogs.csv")
